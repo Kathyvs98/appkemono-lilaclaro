@@ -3,6 +3,8 @@
     ViewData["Title"] = "Catalogo";  
 }
 
+
+
 <h1 align="center">@ViewData["Title"]</h1>
 <br><br>
   <div class="container" align="center">
@@ -34,3 +36,248 @@
       </div>
     </div> 
   </div> 
+
+
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Song Lyrics</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.css" />
+    <style>
+      .song-list{
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    left: 50%;
+    transform: translate(-50% ,0);
+
+
+}
+.song-list li{
+    margin-bottom: 20px;
+    width: 500px;
+    justify-content: space-evenly;
+    letter-spacing: 1px;
+    font-weight: 500;
+    font-size: 18px;
+    text-decoration: overline;
+    text-decoration-color: rgb(12, 147, 100);
+    position: relative;
+    /* line-height: 30px; */
+}
+
+.song-list li::after{
+    content: "";
+    position: absolute;
+    right: -20px;
+    left: -20px;
+    bottom: -4px;
+    height: 3px;
+    background: #9E2092;
+    display: inline-block;
+}
+.song-list li div{
+    float: left;
+}
+
+.song-list li span{
+    float: right;
+    background-color: PINK;
+    border: 0;
+    font-size: 12px;
+    border-radius: 10px;
+    color: BLACK;
+    cursor: pointer;
+    font-weight: 400;
+    padding: 4px 10px;
+    text-transform: capitalize;
+}
+    </style>
+</head>
+<body>
+    <header><center>
+        <div class="container">
+            <h1>BUSCA TU LETRA</h1>
+            <form id="form"  autocomplete="off">
+                <input type="text" id="search"  placeholder="INGRESAR NOMBRE">
+                <button>INICIA</button>
+            </form>
+        </div>
+       </center>
+    </header>
+    <section id="video"></section>
+    <section class="result" id="result">
+      <center>
+        <BR></BR>
+        <h1>LOS RESULTADOS SON :</h1>
+        </center>
+    </section>
+    
+<script src="https://apis.google.com/js/api.js"></script>  
+<script src="//code.jquery.com/jquery-3.2.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.js"></script> 
+
+<script>
+
+
+const form = document.getElementById('form')
+const search = document.getElementById('search')
+const result = document.getElementById('result')
+gapi.load("client", loadClient);
+ 
+function loadClient() {
+    gapi.client.setApiKey("AIzaSyCXd8-DzhjLSwKvOTPJzFJkZHiKvsPNAJs");
+    return gapi.client.load("https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest")
+        .then(function() { console.log("GAPI client loaded for API"); },
+                function(err) { console.error("Error loading GAPI client for API", err); });
+};
+
+
+
+
+const apiURL = 'https://api.lyrics.ovh';
+
+form.addEventListener('submit', e=> {
+    e.preventDefault();
+    searchValue = search.value.trim();
+
+    if(!searchValue){
+        alert("There is nothing to search")
+    }
+    else{ 
+        searchSong(searchValue)
+    }
+})
+
+
+const searchOnKeyUp =() =>{
+    searchValue = search.value.trim();
+    searchSong(searchValue)
+}
+
+async function searchSong(searchValue){
+    const searchResult = await fetch(`${apiURL}/suggest/${searchValue}`)
+    const data = await searchResult.json();
+
+    // console.log(finaldata)
+    showData(data);
+}
+
+
+function showData(data){
+  
+    result.innerHTML = `
+   
+    <ul class="song-list">
+      ${data.data
+        .map(song=> `<center><li>
+                    <div>
+                        <strong>${song.artist.name}</strong> -${song.title} 
+                    </div>
+                    <span data-artist="${song.artist.name}" data-songtitle="${song.title}"> OBTENER</span>
+                </li></center>`
+        )
+        .join('')}
+    </ul>
+  `;
+  document.getElementById('video').innerHTML = ''
+
+
+}
+
+
+
+
+
+result.addEventListener('click', e=>{
+    const clickedElement = e.target;
+
+
+    if (clickedElement.tagName === 'SPAN'){
+        const artist = clickedElement.getAttribute('data-artist');
+        const songTitle = clickedElement.getAttribute('data-songtitle');
+        
+        getLyrics(artist, songTitle)
+    }
+})
+
+
+async function getLyrics(artist, songTitle) {
+  
+    const res = await fetch(`${apiURL}/v1/${artist}/${songTitle}`);
+
+    const data = await res.json();
+    const lyrics = data.lyrics.replace(/(\r\n|\r|\n)/g, '<br>');
+    result.innerHTML = ` <center>
+    <h4 style="margin-bottom:30px;"><strong>${artist}</strong> - ${songTitle}</h4><ul>
+    <div data-artist="${artist}" data-songtitle="${songTitle}"> OBTENER</div>
+    <p style="margin-top:20px;">${lyrics}</p></center>
+`    
+    
+}
+
+
+result.addEventListener('click', e=>{
+    const clickedElement = e.target;
+
+    if (clickedElement.tagName === 'DIV'){
+        const artist = clickedElement.getAttribute('data-artist');
+        const songTitle = clickedElement.getAttribute('data-songtitle');
+        
+        execute(artist, songTitle);
+    }
+    
+})
+
+
+const execute = (artist, songTitle)=>{
+    var pageToken = '';
+
+    var arr_search = {
+        "part": 'snippet',
+        "type": 'video',
+        "order": 'relevance',
+        "maxResults": 1,
+        "q": songTitle + artist
+    };
+ 
+    if (pageToken != '') {
+        arr_search.pageToken = pageToken;
+    }
+ 
+    return gapi.client.youtube.search.list(arr_search)
+    .then(function(response) {
+        // Handle the results here (response.result has the parsed body).
+        const listItems = response.result.items;
+        if (listItems) {
+            let output = `<h4 style="margin-bottom:30px;"><strong>${artist}</strong> - ${songTitle}</h4><ul>`;
+ 
+            listItems.forEach(item => {
+                const videoId = item.id.videoId;
+                const videoTitle = item.snippet.title;
+                output += `
+                    <li><a data-fancybox href="https://www.youtube.com/watch?v=${videoId}"><img src="http://i3.ytimg.com/vi/${videoId}/hqdefault.jpg" /></li>
+                `;
+            });
+            output += '</ul>';
+ 
+
+            document.getElementById('video').innerHTML = output
+           
+        }
+    },
+    function(err) { console.error("Execute error", err); });
+    
+}
+
+</script>
+</body>
+</html>
+
+
+
+<br>
